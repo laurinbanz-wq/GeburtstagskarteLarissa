@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>🎈 Birthday Bird – Larissa (Final, Regex‑Fix)</title>
+<style>
+  :root{ --bg1:#ffd1dc; --bg2:#ffeaaa; --accent:#7c4dff; --accent2:#00c853; --text:#2d2a2e; }
+  html,body{height:100%;margin:0}
+  body{display:flex;align-items:center;justify-content:center;flex-direction:column;background: radial-gradient(circle at 20% 10%, var(--bg2), var(--bg1));font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";color:var(--text);overflow:hidden;touch-action:none;-webkit-tap-highlight-color: transparent;}
+  #wrap{position:relative}
+  canvas{background:linear-gradient(#b3e5fc 0%, #e1f5fe 60%, #ffffff 100%); border-radius:16px; box-shadow:0 12px 30px rgba(0,0,0,.2)}
+  .ui{position:absolute; inset:0; pointer-events:none;}
+  .topbar{position:absolute; top:8px; left:8px; right:8px; display:flex; justify-content:space-between; gap:8px; font-weight:700}
+  .badge{background:rgba(255,255,255,.85); padding:8px 12px; border-radius:999px; backdrop-filter: blur(6px); box-shadow:0 4px 12px rgba(0,0,0,.12)}
+  .center{position:absolute; inset:0; display:flex; align-items:center; justify-content:center;}
+  .card{pointer-events:auto; text-align:center; background:rgba(255,255,255,.92); padding:18px 20px; border-radius:16px; max-width:92%; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .title{font-size:24px; font-weight:900; letter-spacing:.3px}
+  .btns{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px}
+  button{pointer-events:auto; border:0; padding:12px 16px; border-radius:14px; font-weight:800; cursor:pointer; box-shadow:0 6px 14px rgba(0,0,0,.18); font-size:16px}
+  .primary{background:var(--accent); color:white}
+  .ghost{background:white}
+  .hint{font-size:12px; opacity:.75; margin-top:6px}
+  .msg{position:absolute; left:50%; transform:translateX(-50%); top:56px; background:rgba(255,255,255,.96); border-left:6px solid var(--accent2); padding:10px 14px; border-radius:12px; box-shadow:0 8px 20px rgba(0,0,0,.18); max-width:88%; font-weight:700; display:none}
+  .confetti{position:absolute; pointer-events:none; inset:0; overflow:hidden}
+  .footer{margin-top:10px; font-size:12px; opacity:.7}
+  @media (max-width:480px){button{padding:14px 18px; font-size:18px} .title{font-size:22px} .badge{font-size:14px} .msg{top:48px}}
+
+  /* Brief‑Optik (ohne roten Seitenstrich) */
+  .letterCard{background:#fffdf7; border-radius:18px; box-shadow:0 22px 48px rgba(0,0,0,.28); padding:24px 24px 20px; margin-top:12px; position:relative; text-align:left; border:1px solid rgba(0,0,0,.08)}
+  .letterCard:before{content:''; position:absolute; inset:0; border-radius:18px; pointer-events:none; background:repeating-linear-gradient(180deg, transparent 0 28px, rgba(0,0,0,.05) 28px 29px);} 
+  /* kein .letterCard:after => keine rote Linie */
+  .letterHeader{font-weight:900; font-size:20px; margin:0 0 8px 0; position:relative; z-index:1; font-family: Georgia, 'Times New Roman', serif}
+  .letterBody{white-space:pre-wrap; line-height:1.7; position:relative; z-index:1; font-size:16px; font-family: Georgia, 'Times New Roman', serif}
+  .letterFooter{opacity:.85; margin-top:12px; font-style:italic; position:relative; z-index:1; font-family: Georgia, 'Times New Roman', serif}
+  .stamp{position:absolute; right:18px; top:14px; width:64px; height:64px; background:#fff; border:1px dashed rgba(0,0,0,.25); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:28px; transform:rotate(8deg); box-shadow:0 2px 10px rgba(0,0,0,.12); pointer-events:none}
+  .letterCard .dogear{position:absolute; right:0; top:0; width:0; height:0; border-top:22px solid #eee; border-left:22px solid transparent; border-top-right-radius:16px; opacity:.9}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="420" height="720" aria-label="Birthday Bird Game" role="img"></canvas>
+  <div class="ui">
+    <div class="topbar">
+      <div class="badge" id="score">Score: 0</div>
+      <div class="badge" id="best">Best: 0</div>
+    </div>
+    <div id="message" class="msg"></div>
+    <div id="menus" class="center">
+      <div class="card" id="menuStart">
+        <div class="title">🎉 Birthday Bird 🎉</div>
+        <div style="margin-top:6px">Tippe oder drücke <b>Leertaste</b>, damit der Ballon steigt.<br/>Weiche den <b>Säulen mit Querstreifen</b> aus – sammle Punkte und schalte Glückwünsche frei!</div>
+        <div class="btns">
+          <button class="primary" id="btnStart">Los geht's</button>
+          <button class="ghost" id="btnMute">🔊 Ton aus</button>
+        </div>
+        <div class="hint">Mobil: Tippen • Desktop: Leertaste / Klick</div>
+      </div>
+      <div class="card" id="menuOver" style="display:none; max-width:92%">
+        <div class="title">🎂 Geburtstagskarte 🎂</div>
+        <div id="overStats" style="margin-top:6px"></div>
+        <div class="letterCard">
+          <div class="dogear"></div>
+          <div class="stamp">💌</div>
+          <div class="letterHeader">Liebe <span id="letterName"></span>,</div>
+          <div class="letterBody" id="finalLetter"></div>
+          <div class="letterFooter">Alles Liebe! 💖</div>
+        </div>
+        <div class="btns">
+          <button class="primary" id="btnRetry">Nochmal</button>
+          <button class="ghost" id="btnShare">Link teilen</button>
+        </div>
+      </div>
+    </div>
+    <div class="confetti" id="confetti"></div>
+  </div>
+</div>
+<div class="footer">© Birthday Bird – Ein‑Datei‑Version. Name/Wünsche im <b>CONFIG</b>‑Block.</div>
+
+<script>
+// ========================== CONFIG ==========================
+const CONFIG = {
+  recipientName: "Larissa",
+  wishes: [
+    {score: 5, text: "🎈 Alles Gute zum Geburtstag,"},
+    {score: 15, text: "📚 Willkommen im Club der 30-Jährigen, Larissa! Keine Sorge, das ist wie mit guten Büchern – die spannenden Kapitel kommen erst jetzt!"},
+    {score: 25, text: "📈 Larissa kann alles vermarkten – sogar ihre Pausen sehen nach Hochleistung aus."},
+    {score: 35, text: "⏰ Larissa, 30 Jahre jung und immer noch wach, wenn andere schon längst im Tiefschlaf sind… "},
+    {score: 45, text: "🖌️ Sogar Schattierungen werden heller, wenn Larissa zeichnet."},
+    {score: 55, text: "🎂 Herzlichen Glückwunsch! 30 ist das perfekte Alter: alt genug, um es besser zu wissen, und jung genug, um es trotzdem zu tun!"}
+  ],
+  speed: 3.5,        // Spielgeschwindigkeit
+  gap: 250,          // vertikale Lücke zwischen den Säulen
+  spacing: 460,      // HORIZONTALER Abstand zwischen Säulen (weiter auseinander)
+  gravity: 0.30,
+  flapStrength: -7.6,
+  birdRadius: 18,
+};
+
+// ========================== Mini‑Sound ==========================
+const AudioCtx = window.AudioContext || window.webkitAudioContext; let actx=null, muted=false;
+function beep(type='sine', dur=0.08, freq=600, vol=0.05){ if(muted) return; if(!actx) actx=new AudioCtx(); const o=actx.createOscillator(), g=actx.createGain(); o.type=type; o.frequency.value=freq; g.gain.value=vol; o.connect(g); g.connect(actx.destination); o.start(); setTimeout(()=>o.stop(), dur*1000); }
+
+// ========================== Canvas & State ==========================
+const canvas = document.getElementById('game'); const ctx = canvas.getContext('2d');
+const BASE = {W:420, H:720}; let W=BASE.W, H=BASE.H, DPR=window.devicePixelRatio||1;
+const scoreEl=document.getElementById('score'), bestEl=document.getElementById('best'), msgEl=document.getElementById('message');
+const menus=document.getElementById('menus'), menuStart=document.getElementById('menuStart'), menuOver=document.getElementById('menuOver');
+const overStats=document.getElementById('overStats'), confetti=document.getElementById('confetti');
+const btnStart=document.getElementById('btnStart'), btnRetry=document.getElementById('btnRetry'), btnShare=document.getElementById('btnShare'), btnMute=document.getElementById('btnMute');
+let best=+localStorage.getItem('bb_best')||0; bestEl.textContent=`Best: ${best}`;
+let running=false, started=false, frame=0; let bird, pipes, score, nextWishIdx, unlocked;
+
+function reset(){ bird={x:W*0.3, y:H*0.4, vy:0, r:CONFIG.birdRadius}; pipes=[]; score=0; nextWishIdx=0; frame=0; msgEl.style.display='none'; confetti.innerHTML=''; unlocked=[]; }
+
+// ========================== Helpers ==========================
+function rand(min,max){return Math.random()*(max-min)+min}
+function addPipe(){ const topMargin=120, botMargin=140; const gapY = rand(topMargin, H-botMargin); pipes.push({x: W+40, gapY}); }
+function drawBackground(){
+  ctx.save();
+  ctx.fillStyle = '#e1f5fe'; ctx.fillRect(0,0,W,H);
+  for(let i=0;i<6;i++){
+    const y = 60 + i*100 + Math.sin((frame+i*40)/80)*8;
+    const x = (W - (frame*CONFIG.speed*0.6 + i*160)% (W+200));
+    drawCloud(x,y, 40+ (i%3)*8);
+  }
+  ctx.restore();
+}
+function drawCloud(x,y,r){ ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.arc(x+r,y+10,r*0.9,0,Math.PI*2); ctx.arc(x-r,y+10,r*0.8,0,Math.PI*2); ctx.fill(); }
+
+function drawBalloon(){
+  const {x,y,r}=bird;
+  const g=ctx.createRadialGradient(x-6,y-8,4,x,y,r); g.addColorStop(0,'#fff59d'); g.addColorStop(1,'#ff4081');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(x,y,r*1.05,r*0.95,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.65)'; ctx.beginPath(); ctx.ellipse(x-7,y-7,r*0.35,r*0.25,-0.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#8d6e63'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(x,y+r*0.9); ctx.quadraticCurveTo(x+6,y+r*1.4,x-4,y+r*1.9); ctx.stroke();
+  // Geschenkbox am Ballon
+  const gx=x, gy=y+r*1.95; ctx.fillStyle='#ff8a65'; ctx.fillRect(gx-12,gy-14,24,20); ctx.fillStyle='#ff7043'; ctx.fillRect(gx-14,gy-16,28,6);
+  ctx.fillStyle='#ffffff'; ctx.fillRect(gx-2,gy-14,4,20); ctx.fillRect(gx-12,gy-3,24,4);
+  ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.moveTo(gx,gy-16); ctx.quadraticCurveTo(gx-8,gy-20,gx-2,gy-12); ctx.quadraticCurveTo(gx-8,gy-16,gx,gy-16); ctx.fill(); ctx.beginPath(); ctx.moveTo(gx,gy-16); ctx.quadraticCurveTo(gx+8,gy-20,gx+2,gy-12); ctx.quadraticCurveTo(gx+8,gy-16,gx,gy-16); ctx.fill();
+}
+
+// ========================== Säulen mit Querstreifen + vertikaler Name ==========================
+function drawPillar(x,gapY){
+  const w=66; const topH=gapY-CONFIG.gap/2; const botY=gapY+CONFIG.gap/2; const botH=H-botY;
+  const baseTop='#cfd8dc', baseBot='#b0bec5';
+  const stripes=['#ff8a80','#ffd180','#ffff8d','#a7ffeb','#80d8ff','#b388ff'];
+  function body(xPos,y,h){
+    const grad=ctx.createLinearGradient(0,y,0,y+h); grad.addColorStop(0, baseTop); grad.addColorStop(1, baseBot); ctx.fillStyle=grad; ctx.fillRect(xPos,y,w,h);
+    ctx.save(); ctx.globalAlpha=0.85; ctx.lineWidth=6; for(let i=14;i<h; i+=28){ ctx.strokeStyle=stripes[(i/28)%stripes.length|0]; ctx.beginPath(); ctx.moveTo(xPos+2, y+i); ctx.lineTo(xPos+w-2, y+i); ctx.stroke(); } ctx.restore();
+    ctx.fillStyle='rgba(0,0,0,.08)'; ctx.fillRect(xPos, y, 2, h); ctx.fillRect(xPos+w-2, y, 2, h);
+    // Vertikal "LARISSA"
+    if (CONFIG.recipientName && h > 36) {
+      const letters = (CONFIG.recipientName+"").toUpperCase().split("");
+      const size = Math.max(12, Math.min(18, Math.floor(h / (letters.length + 1))));
+      const startY = y + (h - size*letters.length)/2 + size*0.5;
+      ctx.save(); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `bold ${size}px sans-serif`;
+      for(let i=0;i<letters.length;i++){
+        const ly = startY + i*size;
+        ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = Math.max(2, Math.round(size/6));
+        ctx.strokeText(letters[i], xPos + w/2, ly);
+        ctx.fillStyle = '#000'; ctx.fillText(letters[i], xPos + w/2, ly);
+      }
+      ctx.restore();
+    }
+  }
+  body(x,0,topH); body(x,botY,botH);
+}
+
+function circleRectCollide(cx,cy,r,rx,ry,rw,rh){ const nx=Math.max(rx,Math.min(cx,rx+rw)); const ny=Math.max(ry,Math.min(cy,ry+rh)); const dx=cx-nx, dy=cy-ny; return (dx*dx+dy*dy)<r*r; }
+
+// ========================== Game Loop ==========================
+function step(){ if(!running) return; frame++; ctx.clearRect(0,0,W,H); drawBackground(); if(frame===1 || (pipes.length===0) || (W - (pipes[pipes.length-1].x) > CONFIG.spacing)){ addPipe(); } for(const p of pipes){ p.x -= CONFIG.speed; } pipes = pipes.filter(p=> p.x > -90); bird.vy += CONFIG.gravity; bird.y += bird.vy; for(const p of pipes){ drawPillar(p.x,p.gapY);} drawBalloon(); for(const p of pipes){ const w=66; const topH=p.gapY-CONFIG.gap/2; const botY=p.gapY+CONFIG.gap/2; const botH=H-botY; if(circleRectCollide(bird.x,bird.y,bird.r, p.x,0,w,topH) || circleRectCollide(bird.x,bird.y,bird.r, p.x,botY,w,botH) || bird.y>H-8 || bird.y<0){ endGame(); return;} if(!p.scored && p.x + w < bird.x){ p.scored=true; score++; scoreEl.textContent=`Score: ${score}`; beep('triangle',0.05, 340+score*6, 0.05); maybeShowWish(); }} requestAnimationFrame(step); }
+
+function startGame(){ reset(); started=true; running=true; menus.style.display='none'; beep('sine',0.08,800,0.08); requestAnimationFrame(step); }
+
+// ========================== Sanitizer (Regex‑Fix) ==========================
+function sanitizeText(str) {
+  return String(str)
+    .replace(/\r\n|\r/g, '\n')  // normalisiere CRLF/CR => \n
+    .replace(/\u2028|\u2029/g, '\n') // Line/Paragraph Separator absichern
+    .replace(/\|/g, ' ');        // FIX: Pipe als Literal escapen
+}
+
+function endGame(){
+  running=false; if(navigator.vibrate) navigator.vibrate([30,40,30]); beep('sawtooth',0.1,160,0.06);
+  best=Math.max(best,score); localStorage.setItem('bb_best',best); bestEl.textContent=`Best: ${best}`;
+  overStats.innerHTML=`Score: <b>${score}</b> · Best: <b>${best}</b>`;
+  // Geburtstagsbrief befüllen (jede freigeschaltete Zeile = eigene Briefzeile)
+  document.getElementById('letterName').textContent = CONFIG.recipientName || 'du';
+  const safeUnlocked = (unlocked||[]).map(sanitizeText);
+  document.getElementById('finalLetter').textContent = safeUnlocked.join('\n');
+  document.getElementById('menuStart').style.display='none';
+  document.getElementById('menuOver').style.display='block';
+  menus.style.display='flex';
+}
+
+// ========================== Wishes & Confetti ==========================
+function maybeShowWish(){ if(nextWishIdx>=CONFIG.wishes.length) return; const w=CONFIG.wishes[nextWishIdx]; if(score>=w.score){ nextWishIdx++; const txt=(w.text.includes(CONFIG.recipientName)? w.text : (w.text+(w.text.endsWith(' ')?'':' ')+(CONFIG.recipientName||''))).trim(); unlocked.push(txt); showToast(txt); spawnConfetti(); }}
+function showToast(text){ msgEl.textContent=text; msgEl.style.display='block'; clearTimeout(showToast._t); showToast._t=setTimeout(()=> msgEl.style.display='none', 3000); }
+function spawnConfetti(){ for(let i=0;i<55;i++){ const piece=document.createElement('div'); const s=6+Math.random()*6; const x=Math.random()*100; const rot=Math.random()*360; piece.style.cssText=`position:absolute;top:-10px;left:${x}%;width:${s}px;height:${s*0.5}px;background:${['#ff4081','#7c4dff','#00c853','#ffb300','#40c4ff'][i%5]};transform:rotate(${rot}deg);opacity:0.9;`; confetti.appendChild(piece); const fall=60+Math.random()*40; piece.animate([{transform:`translateY(0) rotate(${rot}deg)`,opacity:1},{transform:`translateY(${H}px) rotate(${rot+360}deg)`,opacity:0.9}],{duration:fall*20,easing:'ease-in',fill:'forwards'}).onfinish=()=>piece.remove(); }}
+
+// ========================== DEV Self‑Tests ==========================
+(function runSelfTests(){
+  try {
+    // (1) sanitizeText: Pipes entfernen & Newlines normalisieren
+    console.assert(sanitizeText('A|B\r\nC|D') === 'A B\nC D', 'sanitizeText entfernt | und normiert Newlines');
+    // (2) Letter: textContent mit Newlines -> bleiben erhalten
+    const tmp = document.createElement('div'); tmp.textContent = ['X','Y'].map(sanitizeText).join('\n');
+    console.assert(tmp.textContent.split('\n').length === 2, 'textContent behält Newlines');
+    // (3) Spacing: deutlich größer als Standard
+    console.assert(CONFIG.spacing >= 420, 'Spacing sollte >= 420 sein');
+  } catch (e) { console.error('Self‑tests failed:', e); }
+})();
+
+// ========================== Input & UI ==========================
+function flap(){ if(!running) return; bird.vy=CONFIG.flapStrength; if(navigator.vibrate) navigator.vibrate(10); beep('square',0.04,520,0.05) }
+canvas.addEventListener('pointerdown', e=>{ e.preventDefault(); if(!started) startGame(); else flap(); }, {passive:false});
+window.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); if(!started) startGame(); else flap(); }});
+
+btnStart.onclick=startGame; btnRetry.onclick=()=>{ menuOver.style.display='none'; menuStart.style.display='block'; startGame(); };
+btnShare.onclick=async()=>{ const url=location.href; try{ await navigator.clipboard.writeText(url); showToast('🔗 Link kopiert!'); }catch{ showToast('Kopieren nicht erlaubt – Link manuell teilen.'); }};
+btnMute.onclick=()=>{ muted=!muted; btnMute.textContent = muted? '🔇 Ton an' : '🔊 Ton aus'; };
+
+// ========================== Responsive Canvas ==========================
+function fit(){ const ratio=BASE.H/BASE.W; const cssW=Math.min(520, Math.max(320, window.innerWidth-20)); const cssH=cssW*ratio; DPR=Math.min(2, window.devicePixelRatio||1); canvas.style.width=cssW+'px'; canvas.style.height=cssH+'px'; canvas.width=Math.round(cssW*DPR); canvas.height=Math.round(cssH*DPR); ctx.setTransform(DPR,0,0,DPR,0,0); W=cssW; H=cssH; }
+window.addEventListener('resize', fit, {passive:true}); fit();
+
+// ========================== Power Saving ==========================
+window.addEventListener('visibilitychange', ()=>{ if(document.hidden){ running=false; } else if(started && !running){ running=true; requestAnimationFrame(step); } });
+</script>
+</body>
+</html>
